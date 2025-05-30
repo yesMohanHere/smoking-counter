@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smoking_tracker_app/lib/smoking_tracker.dart'; // Assuming main.dart or app.dart is in lib
+import 'package:smoking_tracker_app/smoking_tracker.dart';
 
 // Helper function to wrap the widget for testing
 Widget createTestableWidget({required Widget child}) {
