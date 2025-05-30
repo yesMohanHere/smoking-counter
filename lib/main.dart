@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:smoking_tracker_app/lib/smoking_tracker.dart'; // Ensure this path matches your project structure
+import 'package:smoking_tracker_app/smoking_tracker.dart';
 
 void main() {
   runApp(const MyApp());
