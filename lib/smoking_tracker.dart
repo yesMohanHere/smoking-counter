@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 
 class SmokingTracker extends StatefulWidget {
   const SmokingTracker({super.key});
@@ -10,13 +11,23 @@ class SmokingTracker extends StatefulWidget {
 
 class _SmokingTrackerState extends State<SmokingTracker> {
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _goalController = TextEditingController();
   int _count = 0;
+  int _goal = 10;
   static const String _countKey = 'daily_smoke_count';
+  static const String _goalKey = 'daily_smoke_goal';
+  final List<String> _tips = [
+    'Take a walk when craving a cigarette.',
+    'Stay hydrated to reduce cravings.',
+    'Reach out to a friend for support.',
+    'Deep breathing can help manage stress.',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadCount();
+    _loadGoal();
   }
 
   Future<void> _loadCount() async {
@@ -24,6 +35,14 @@ class _SmokingTrackerState extends State<SmokingTracker> {
     setState(() {
       _count = prefs.getInt(_countKey) ?? 0;
       _controller.text = _count.toString();
+    });
+  }
+
+  Future<void> _loadGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _goal = prefs.getInt(_goalKey) ?? 10;
+      _goalController.text = _goal.toString();
     });
   }
 
@@ -35,12 +54,29 @@ class _SmokingTrackerState extends State<SmokingTracker> {
     );
   }
 
+  Future<void> _saveGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_goalKey, _goal);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Goal saved: $_goal')),
+    );
+  }
+
+  void _updateGoal(int newGoal) {
+    setState(() {
+      _goal = newGoal;
+      _goalController.text = _goal.toString();
+    });
+    _saveGoal();
+  }
+
   void _updateCount(int newCount) {
     setState(() {
       _count = newCount;
       _controller.text = _count.toString();
     });
     _saveCount(); // Auto-save when count changes
+    _checkGoalReached();
   }
 
   void _incrementCount() {
@@ -51,6 +87,23 @@ class _SmokingTrackerState extends State<SmokingTracker> {
     if (_count > 0) {
       _updateCount(_count - 1);
     }
+  }
+
+  void _resetCount() {
+    _updateCount(0);
+  }
+
+  void _checkGoalReached() {
+    if (_count >= _goal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Congratulations! Goal of $_goal reached.')),
+      );
+    }
+  }
+
+  String _getRandomTip() {
+    final rand = Random();
+    return _tips[rand.nextInt(_tips.length)];
   }
 
   @override
@@ -79,6 +132,25 @@ class _SmokingTrackerState extends State<SmokingTracker> {
               },
             ),
             const SizedBox(height: 20),
+            TextField(
+              controller: _goalController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Daily goal',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                final newGoal = int.tryParse(value);
+                if (newGoal != null && newGoal > 0) {
+                  _updateGoal(newGoal);
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+            LinearProgressIndicator(
+              value: _goal > 0 ? _count / _goal.clamp(1, double.infinity) : 0,
+            ),
+            const SizedBox(height: 20),
             Text(
               'Current count: $_count',
               style: Theme.of(context).textTheme.headlineMedium,
@@ -95,12 +167,27 @@ class _SmokingTrackerState extends State<SmokingTracker> {
                   onPressed: _incrementCount,
                   child: const Icon(Icons.add),
                 ),
+                ElevatedButton(
+                  onPressed: _resetCount,
+                  child: const Icon(Icons.refresh),
+                ),
               ],
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveCount, // Manual save button
               child: const Text('Save Count'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _saveGoal,
+              child: const Text('Save Goal'),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Tip: ${_getRandomTip()}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
         ),
@@ -111,6 +198,7 @@ class _SmokingTrackerState extends State<SmokingTracker> {
   @override
   void dispose() {
     _controller.dispose();
+    _goalController.dispose();
     super.dispose();
   }
 }
